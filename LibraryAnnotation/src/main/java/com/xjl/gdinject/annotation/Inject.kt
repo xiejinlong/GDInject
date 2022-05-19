@@ -1,5 +1,5 @@
 package com.xjl.gdinject.annotation
 
-@Target(AnnotationTarget.FUNCTION)
+@Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.BINARY)
 annotation class Inject

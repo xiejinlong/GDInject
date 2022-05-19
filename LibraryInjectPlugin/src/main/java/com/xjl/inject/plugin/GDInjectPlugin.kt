@@ -2,11 +2,9 @@ package com.xjl.inject.plugin
 
 import com.android.build.api.transform.Status
 import com.kuaikan.library.classknife.KBaseClassKnifePlugin
-import com.kuaikan.library.libknifebase.core.ITransform
-import com.kuaikan.library.libknifebase.core.ITransformByClassVisitor
-import com.kuaikan.library.libknifebase.core.KnifeCodeType
-import com.kuaikan.library.libknifebase.core.VisitorTransformer
+import com.kuaikan.library.libknifebase.core.*
 import com.xjl.inject.plugin.collect.GDInjectCollectClassVisitor
+import com.xjl.inject.plugin.collect.GlobalCollectorContainer
 import com.xjl.inject.plugin.proceed.GDInjectProceedVisitor
 import org.objectweb.asm.ClassVisitor
 
@@ -16,6 +14,14 @@ class GDInjectPlugin: KBaseClassKnifePlugin() {
     }
     override fun getKnifeCodeType(): KnifeCodeType {
         return KnifeCodeType.VISITOR
+    }
+
+    override fun getTransformHacker(): ITransformHacker? {
+        return object : TransformHackerAdapter() {
+            override fun beforeTransform() {
+                GlobalCollectorContainer.restData()
+            }
+        }
     }
 
     override fun getTransformer(): ITransform {

@@ -1,6 +1,7 @@
 plugins {
     id 'java-library'
     id 'kotlin'
+    id 'maven-publish'
 }
 
 java {
@@ -9,4 +10,27 @@ java {
 }
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib:1.3.72"
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            classKnife(MavenPublication) {
+                groupId "com.xjl.inject"
+                artifactId "inject-annotation"
+                version "1.0.0"
+                from components.java
+            }
+        }
+        repositories {
+            maven {
+                url = ""
+                allowInsecureProtocol = true
+                credentials {
+                    username = ""
+                    password = ""
+                }
+            }
+        }
+    }
 }

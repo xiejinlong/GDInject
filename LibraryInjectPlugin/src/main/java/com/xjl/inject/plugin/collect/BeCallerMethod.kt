@@ -1,6 +1,7 @@
 package com.xjl.inject.plugin.collect
 
 class BeCallerMethod {
+    var className: String? = null
     var methodName: String? = null
     var methodSignature: String? = null
     var access: Int? = null
