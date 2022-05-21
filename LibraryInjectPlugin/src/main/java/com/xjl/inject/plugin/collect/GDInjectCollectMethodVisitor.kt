@@ -67,12 +67,9 @@ class GDInjectCollectMethodVisitor(
                     }
                 }
                 annotationRecord.injectMap[InjectMethodRecord().apply {
-//                    this.className = RegexUtil.replaceClassName(className)
-//                    this.methodName = RegexUtil.replaceMethodName(methodName)
-//                    this.methodDesc = RegexUtil.replaceMethodDesc(methodDesc)
-                    this.className = RegexUtil.replace(className)
-                    this.methodName = RegexUtil.replace(methodName)
-                    this.methodDesc = RegexUtil.replace(methodDesc)
+                    this.className = RegexUtil.replaceClassName(className)
+                    this.methodName = RegexUtil.replaceMethodName(methodName)
+                    this.methodDesc = RegexUtil.replaceMethodDesc(methodDesc)
                     Log.e("XJL", "className: ${this.className}, methodName: ${methodName}, methodDesc: ${methodDesc}")
                     this.extend = this@GDInjectCollectMethodVisitor.extend
                     this.supered = this@GDInjectCollectMethodVisitor.supered

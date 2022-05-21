@@ -1,6 +1,5 @@
 package com.xjl.inject.plugin.proceed
 
-import com.android.tools.build.jetifier.core.utils.Log
 import com.kuaikan.library.libknifeasm.AsmConstant
 import com.kuaikan.library.libknifeutil.util.ClassUtil
 import com.kuaikan.library.libknifeutil.util.CloseUtil
@@ -31,22 +30,10 @@ class GDInjectReplaceMethodVisitor(
         val findInjectMethodRecord: InjectMethodRecord? =
             queryCurrentReplaceMethodList.filter { it.className == StringUtil.replaceSlash2Dot(owner) }
                 .filter { it.methodName == name }.firstOrNull { it.methodDesc == descriptor }
-        if (sourceInfo?.className?.contains("Main") == true) {
-            Log.e("xjl", "queryInject..: ${StringUtil.replaceSlash2Dot(owner)}")
-            com.kuaikan.library.libknifeutil.util.Log.e(
-                "XJL",
-                "className: $owner, methodName: $name, methodDesc: $descriptor"
-            )
-        }
-
         if (findInjectMethodRecord == null) {
             super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
             return
         }
-        Log.e(
-            "xjl", "has be calll.... ${findInjectMethodRecord.className}, " +
-                    "${findInjectMethodRecord.methodName}, ${findInjectMethodRecord.methodDesc}"
-        )
         val beCallerMethod =
             GlobalCollectorContainer.getOrCreateByAnnotationSignature(AnnotationSignatureEnum.AnnotationReplace.descriptor)
                 .injectMap[findInjectMethodRecord]
@@ -94,7 +81,6 @@ class GDInjectReplaceMethodVisitor(
             Type.getArgumentTypes(injectMethodRecord.methodDesc)
         val beCallMethodParamTypes: Array<Type> =
             Type.getArgumentTypes(beCallerMethod.methodDescriptor)
-        Log.e("XJL", "the opcode is : ${injectMethodRecord.opcode}")
         //首先check第一个参数
         if (injectMethodRecord.opcode == Opcodes.INVOKEVIRTUAL
             || injectMethodRecord.opcode == Opcodes.INVOKEINTERFACE
