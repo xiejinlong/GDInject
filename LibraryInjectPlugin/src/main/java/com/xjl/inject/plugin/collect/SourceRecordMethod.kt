@@ -1,6 +1,6 @@
 package com.xjl.inject.plugin.collect
 
-class InjectMethodRecord {
+class SourceRecordMethod {
     var className: String? = null
     var methodName: String? = null
     var methodDesc: String? = null
@@ -10,7 +10,7 @@ class InjectMethodRecord {
     var needSourceInfo: Boolean = false
 
     override fun equals(other: Any?): Boolean {
-        if (other !is InjectMethodRecord) return false
+        if (other !is SourceRecordMethod) return false
         if (other.className != this.className) {
             return false
         }

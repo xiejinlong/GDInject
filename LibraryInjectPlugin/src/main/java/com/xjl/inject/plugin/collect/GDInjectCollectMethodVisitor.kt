@@ -66,7 +66,7 @@ class GDInjectCollectMethodVisitor(
                         CloseUtil.exit("$target is not exists !")
                     }
                 }
-                annotationRecord.injectMap[InjectMethodRecord().apply {
+                annotationRecord.injectMap[SourceRecordMethod().apply {
                     this.className = RegexUtil.replaceClassName(className)
                     this.methodName = RegexUtil.replaceMethodName(methodName)
                     this.methodDesc = RegexUtil.replaceMethodDesc(methodDesc)

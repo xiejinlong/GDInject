@@ -46,10 +46,13 @@ class GDInjectProceedVisitor(classVisitor: ClassVisitor) :
         if (isInjectClass) {
             return innerMethodVisitor
         }
-        return GDInjectReplaceMethodVisitor(SourceInfo().apply {
+        val sourceMethodInfo = SourceMethodInfo().apply {
             this.className = currentClassName
             this.methodName = name
             this.methodDesc = descriptor
-        }, innerMethodVisitor)
+        }
+        val gdInjectReplaceMethodVisitor =  GDInjectReplaceMethodVisitor(sourceMethodInfo, innerMethodVisitor)
+        val tryCatchMethodVisitor = GDInjectTryCatchMethodVisitor(sourceMethodInfo, gdInjectReplaceMethodVisitor)
+        return tryCatchMethodVisitor
     }
 }

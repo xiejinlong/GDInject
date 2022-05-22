@@ -8,4 +8,9 @@ class TestThread {
     fun test1() {
 
     }
+
+
+    fun test2(): Int {
+        return 1
+    }
 }

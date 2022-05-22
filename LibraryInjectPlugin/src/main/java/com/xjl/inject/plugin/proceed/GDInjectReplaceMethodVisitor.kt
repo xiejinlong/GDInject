@@ -7,13 +7,13 @@ import com.kuaikan.library.libknifeutil.util.StringUtil
 import com.xjl.gdinject.annotation.signature.AnnotationSignatureEnum
 import com.xjl.inject.plugin.collect.BeCallerMethod
 import com.xjl.inject.plugin.collect.GlobalCollectorContainer
-import com.xjl.inject.plugin.collect.InjectMethodRecord
+import com.xjl.inject.plugin.collect.SourceRecordMethod
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 
 class GDInjectReplaceMethodVisitor(
-    private val sourceInfo: SourceInfo,
+    private val sourceMethodInfo: SourceMethodInfo,
     originMethodVisitor: MethodVisitor
 ) :
     MethodVisitor(AsmConstant.ASM_VERSION, originMethodVisitor) {
@@ -27,32 +27,32 @@ class GDInjectReplaceMethodVisitor(
     ) {
         val queryCurrentReplaceMethodList =
             GlobalCollectorContainer.getOrCreateByAnnotationSignature(AnnotationSignatureEnum.AnnotationReplace.descriptor).injectMap.keys
-        val findInjectMethodRecord: InjectMethodRecord? =
+        val findSourceRecordMethod: SourceRecordMethod? =
             queryCurrentReplaceMethodList.filter { it.className == StringUtil.replaceSlash2Dot(owner) }
                 .filter { it.methodName == name }.firstOrNull { it.methodDesc == descriptor }
-        if (findInjectMethodRecord == null) {
+        if (findSourceRecordMethod == null) {
             super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
             return
         }
         val beCallerMethod =
             GlobalCollectorContainer.getOrCreateByAnnotationSignature(AnnotationSignatureEnum.AnnotationReplace.descriptor)
-                .injectMap[findInjectMethodRecord]
+                .injectMap[findSourceRecordMethod]
         if (beCallerMethod == null) {
             super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
             return
         }
-        findInjectMethodRecord.opcode = opcode
-        checkParamValid(findInjectMethodRecord, beCallerMethod)
-        startReplaceMethod(findInjectMethodRecord, beCallerMethod)
+        findSourceRecordMethod.opcode = opcode
+        checkParamValid(findSourceRecordMethod, beCallerMethod)
+        startReplaceMethod(findSourceRecordMethod, beCallerMethod)
     }
 
     private fun startReplaceMethod(
-        injectMethodRecord: InjectMethodRecord,
+        sourceRecordMethod: SourceRecordMethod,
         beCallerMethod: BeCallerMethod
     ) {
-        if (injectMethodRecord.needSourceInfo) {
+        if (sourceRecordMethod.needSourceInfo) {
             val sourceInfo: String =
-                sourceInfo.className + " : " + sourceInfo.methodName + " : " + sourceInfo.methodDesc
+                sourceMethodInfo.className + " : " + sourceMethodInfo.methodName + " : " + sourceMethodInfo.methodDesc
             visitLdcInsn(sourceInfo)
         }
         super.visitMethodInsn(
@@ -65,28 +65,28 @@ class GDInjectReplaceMethodVisitor(
     }
 
     private fun checkParamValid(
-        injectMethodRecord: InjectMethodRecord,
+        sourceRecordMethod: SourceRecordMethod,
         beCallerMethod: BeCallerMethod
     ) {
-        checkParamCount(injectMethodRecord, beCallerMethod)
-        checkParamType(injectMethodRecord, beCallerMethod)
+        checkParamCount(sourceRecordMethod, beCallerMethod)
+        checkParamType(sourceRecordMethod, beCallerMethod)
     }
 
     private fun checkParamType(
-        injectMethodRecord: InjectMethodRecord,
+        sourceRecordMethod: SourceRecordMethod,
         beCallerMethod: BeCallerMethod
     ) {
         var beCallerMethodStartCount = 0
         val injectMethodRecordType: Array<Type> =
-            Type.getArgumentTypes(injectMethodRecord.methodDesc)
+            Type.getArgumentTypes(sourceRecordMethod.methodDesc)
         val beCallMethodParamTypes: Array<Type> =
             Type.getArgumentTypes(beCallerMethod.methodDescriptor)
         //首先check第一个参数
-        if (injectMethodRecord.opcode == Opcodes.INVOKEVIRTUAL
-            || injectMethodRecord.opcode == Opcodes.INVOKEINTERFACE
-            || injectMethodRecord.opcode == Opcodes.INVOKESPECIAL
+        if (sourceRecordMethod.opcode == Opcodes.INVOKEVIRTUAL
+            || sourceRecordMethod.opcode == Opcodes.INVOKEINTERFACE
+            || sourceRecordMethod.opcode == Opcodes.INVOKESPECIAL
         ) {
-            val ownerClassName: String = injectMethodRecord.className ?: ""
+            val ownerClassName: String = sourceRecordMethod.className ?: ""
             val type: Type = beCallMethodParamTypes[0]
             val firstParamClassName = type.className
             if (!ClassUtil.isSuper(ownerClassName, firstParamClassName)) {
@@ -109,7 +109,7 @@ class GDInjectReplaceMethodVisitor(
             CloseUtil.exit("exception when checkParamType!, e: ${e.stackTrace}")
         }
 
-        if (injectMethodRecord.needSourceInfo) {
+        if (sourceRecordMethod.needSourceInfo) {
             val needSourceInfoClassName = beCallMethodParamTypes[beCallerMethodStartCount].className
             if (String::class.java.name != needSourceInfoClassName) {
                 CloseUtil.exit("source type is error, need string, but now is $needSourceInfoClassName ")
@@ -118,15 +118,15 @@ class GDInjectReplaceMethodVisitor(
     }
 
     private fun checkParamCount(
-        injectMethodRecord: InjectMethodRecord,
+        sourceRecordMethod: SourceRecordMethod,
         beCallerMethod: BeCallerMethod
     ) {
-        val injectMethodParamCount: Int = Type.getArgumentTypes(injectMethodRecord.methodDesc).size
+        val injectMethodParamCount: Int = Type.getArgumentTypes(sourceRecordMethod.methodDesc).size
         val beCallMethodParamCount: Int =
             Type.getArgumentTypes(beCallerMethod.methodDescriptor).size
-        val needSourceInfo: Boolean = injectMethodRecord.needSourceInfo
+        val needSourceInfo: Boolean = sourceRecordMethod.needSourceInfo
         val targetRealParamCount = beCallMethodParamCount - if (needSourceInfo) 1 else 0
-        when (injectMethodRecord.opcode) {
+        when (sourceRecordMethod.opcode) {
             Opcodes.INVOKESTATIC -> {
                 if (injectMethodParamCount != targetRealParamCount) {
                     CloseUtil.exit("illegal param count, target: $targetRealParamCount, injectCount: $injectMethodParamCount")
