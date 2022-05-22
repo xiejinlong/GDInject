@@ -1,6 +1,14 @@
 package com.xjl.gdinject
 
-class TestThread {
+class MainRealDemoThread {
+
+    companion object {
+        @JvmStatic
+        fun test3() {
+
+        }
+    }
+
     fun test() {
 
     }

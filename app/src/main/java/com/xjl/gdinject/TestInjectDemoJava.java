@@ -1,2 +1,5 @@
-package com.xjl.gdinject;public class TestInjectDemoJava {
+package com.xjl.gdinject;
+
+public class TestInjectDemoJava {
+
 }

@@ -2,6 +2,7 @@ package com.xjl.inject.plugin.proceed
 
 import com.kuaikan.library.libknifeasm.AsmConstant
 import com.kuaikan.library.libknifeutil.util.CloseUtil
+import com.kuaikan.library.libknifeutil.util.Log
 import com.kuaikan.library.libknifeutil.util.StringUtil
 import com.xjl.gdinject.annotation.signature.AnnotationSignatureEnum
 import com.xjl.inject.plugin.collect.BeCallerMethod
@@ -12,7 +13,11 @@ import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 
-class GDInjectTryCatchMethodVisitor(var sourceMethodInfo: SourceMethodInfo, var sourceMethodVisitor: MethodVisitor): MethodVisitor(AsmConstant.ASM_VERSION, sourceMethodVisitor) {
+class GDInjectTryCatchMethodVisitor(
+    var sourceMethodInfo: SourceMethodInfo,
+    var sourceMethodVisitor: MethodVisitor
+) : MethodVisitor(AsmConstant.ASM_VERSION, sourceMethodVisitor) {
+
 
     companion object {
         const val TYPE_THROWABLE = "java/lang/Throwable"
@@ -36,10 +41,19 @@ class GDInjectTryCatchMethodVisitor(var sourceMethodInfo: SourceMethodInfo, var 
     private val returnLabel = Label()
 
     private val sourceRecordMethod: SourceRecordMethod? by lazy {
+        if (sourceMethodInfo.className?.contains("Test") == true) {
+            Log.e("xjl", "start try catch method")
+        }
         val queryTryCatchMethodList =
             GlobalCollectorContainer.getOrCreateByAnnotationSignature(AnnotationSignatureEnum.AnnotationTryCatch.descriptor).injectMap.keys
-        queryTryCatchMethodList.filter { it.className == StringUtil.replaceSlash2Dot(sourceMethodInfo.className) }
-                .filter { it.methodName == sourceMethodInfo.methodName }.firstOrNull { it.methodDesc == sourceMethodInfo.methodDesc }
+
+        queryTryCatchMethodList.filter {
+            it.className == StringUtil.replaceSlash2Dot(
+                sourceMethodInfo.className
+            )
+        }
+            .filter { it.methodName == sourceMethodInfo.methodName }
+            .firstOrNull { it.methodDesc == sourceMethodInfo.methodDesc }
     }
 
     private val beCallMethod: BeCallerMethod by lazy {
@@ -54,7 +68,11 @@ class GDInjectTryCatchMethodVisitor(var sourceMethodInfo: SourceMethodInfo, var 
         if (sourceRecordMethod == null) {
             return
         }
-        visitTryCatchBlock(startLabel, endLabel, handleLabel, TYPE_THROWABLE)
+        Log.e(
+            "xjl",
+            "try try catch....${beCallMethod.className}:${beCallMethod.methodName}:${beCallMethod.methodDescriptor}"
+        )
+        super.visitTryCatchBlock(startLabel, endLabel, handleLabel, TYPE_THROWABLE)
         visitLabel(startLabel)
     }
 
@@ -69,19 +87,25 @@ class GDInjectTryCatchMethodVisitor(var sourceMethodInfo: SourceMethodInfo, var 
         visitLabel(endLabel)
         visitJumpInsn(Opcodes.GOTO, returnLabel)
         visitLabel(handleLabel)
+
         visitVarInsn(Opcodes.ASTORE, 1)
         visitVarInsn(Opcodes.ALOAD, 1)
         innerCallDestMethod()
         visitLabel(returnLabel)
         visitReturnOpcodes()
-        super.visitMaxs(maxStack, maxLocals)
+
+        Log.e(
+            "xjl",
+            "inner try catch....${beCallMethod.className}:${beCallMethod.methodName}:${beCallMethod.methodDescriptor}"
+        )
+        super.visitMaxs(maxStack + 2, maxLocals + 2)
     }
 
     private fun visitReturnOpcodes() {
-        val methodDesc: String = beCallMethod.methodDescriptor?:""
+        val methodDesc: String = beCallMethod.methodDescriptor ?: ""
         if (methodDesc.contains(")V")) {
             visitInsn(Opcodes.RETURN)
-        } else if (methodDesc.contains(")I")) {
+        } else if (methodDesc.contains(")I") || methodDesc.contains(")Z") || methodDesc.contains(")B") || methodDesc.contains(")C")) {
             visitInsn(Opcodes.IRETURN)
         } else if (methodDesc.contains(")J")) {
             visitInsn(Opcodes.LRETURN)
@@ -94,7 +118,8 @@ class GDInjectTryCatchMethodVisitor(var sourceMethodInfo: SourceMethodInfo, var 
             visitInsn(Opcodes.DRETURN)
         } else if (methodDesc.contains(")F")) {
             visitInsn(Opcodes.FRETURN)
-        } else {
+        }
+        else {
             visitInsn(Opcodes.RETURN)
         }
     }

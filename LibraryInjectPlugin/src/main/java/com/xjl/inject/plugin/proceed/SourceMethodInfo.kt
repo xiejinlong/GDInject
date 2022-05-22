@@ -7,4 +7,5 @@ class SourceMethodInfo {
     var className: String? = null
     var methodName: String? = null
     var methodDesc: String? = null
+    var access: Int = 0
 }

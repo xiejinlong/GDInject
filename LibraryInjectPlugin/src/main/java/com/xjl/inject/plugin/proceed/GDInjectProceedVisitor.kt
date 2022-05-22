@@ -50,9 +50,11 @@ class GDInjectProceedVisitor(classVisitor: ClassVisitor) :
             this.className = currentClassName
             this.methodName = name
             this.methodDesc = descriptor
+            this.access = access
         }
-        val gdInjectReplaceMethodVisitor =  GDInjectReplaceMethodVisitor(sourceMethodInfo, innerMethodVisitor)
-        val tryCatchMethodVisitor = GDInjectTryCatchMethodVisitor(sourceMethodInfo, gdInjectReplaceMethodVisitor)
-        return tryCatchMethodVisitor
+        val tryCatchMethodVisitor = GDInjectTryCatchMethodVisitor(sourceMethodInfo, innerMethodVisitor)
+        val gdInjectReplaceMethodVisitor =  GDInjectReplaceMethodVisitor(sourceMethodInfo, tryCatchMethodVisitor)
+        val gdInjectAroundVisitor = GDInjectAroundMethodVisitor(sourceMethodInfo, gdInjectReplaceMethodVisitor)
+        return gdInjectAroundVisitor
     }
 }
