@@ -5,9 +5,11 @@ class SourceRecordMethod {
     var methodName: String? = null
     var methodDesc: String? = null
     var opcode: Int = 0
+    var isStatic = true
     var extend: Boolean = false
     var supered: Boolean = false
     var needSourceInfo: Boolean = false
+    var after: Boolean = false
 
     override fun equals(other: Any?): Boolean {
         if (other !is SourceRecordMethod) return false

@@ -11,6 +11,10 @@ class AnnotationParam {
          */
         const val PARAM_VERIFY = "forceVerify"
         /**
+         * @see com.xjl.gdinject.annotation.Around
+         */
+        const val PARAM_AFTER = "after"
+        /**
          * @see com.xjl.gdinject.annotation.Replace
          */
         const val PARAM_NEED_SOURCE_INFO = "needSourceInfo"

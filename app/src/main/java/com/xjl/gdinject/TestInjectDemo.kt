@@ -16,9 +16,29 @@ class TestInjectDemo {
         }
 
         @JvmStatic
-        @Around(targets = ["com.xjl.gdinject.MainRealDemoThread.test3()V"])
-        fun aroundTestThread() {
+        @Around(targets = ["com.xjl.gdinject.MainActivity.innerTestAround()Z"])
+        fun aroundTestThread11111(activity: MainActivity): Boolean {
             System.out.println("nothing")
+            return false
+        }
+
+        @JvmStatic
+        @Around(targets = ["com.xjl.gdinject.MainActivity.innerTestTryCatch1()Z"],after = true)
+        fun aroundTestThread22222(mainActivity: MainActivity) {
+            System.out.println("nothing")
+        }
+
+
+        @JvmStatic
+        @Around(targets = ["com.xjl.gdinject.MainActivity.innerTestTryAroundParam(IZ)Z"],after = true)
+        fun aroundTestThread3333(activity: MainActivity, type: Int, result: Boolean) {
+            System.out.println("nothing, activity: ${activity}, $type, $result")
+        }
+
+        @JvmStatic
+        @Around(targets = ["com.xjl.gdinject.MainActivity.innerTestAroundStatic(IZ)Z"])
+        fun aroundTestThread4444(type: Int, result: Boolean) {
+            System.out.println("nothing, activity: , $type, $result")
         }
 
         @Replace(targets = ["com.xjl.gdinject.MainRealDemoThread.test1()V"])

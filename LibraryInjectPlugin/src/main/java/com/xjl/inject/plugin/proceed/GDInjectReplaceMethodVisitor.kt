@@ -51,7 +51,7 @@ class GDInjectReplaceMethodVisitor(
         }
         Log.e("xjl", "try replace....${beCallerMethod.className}:${beCallerMethod.methodName}:${beCallerMethod.methodDescriptor}")
         findSourceRecordMethod.opcode = opcode
-        checkParamValid(findSourceRecordMethod, beCallerMethod)
+        ParamCheckUtil.checkParamValid(findSourceRecordMethod, beCallerMethod)
         startReplaceMethod(findSourceRecordMethod, beCallerMethod)
     }
 
@@ -73,79 +73,5 @@ class GDInjectReplaceMethodVisitor(
         )
     }
 
-    private fun checkParamValid(
-        sourceRecordMethod: SourceRecordMethod,
-        beCallerMethod: BeCallerMethod
-    ) {
-        checkParamCount(sourceRecordMethod, beCallerMethod)
-        checkParamType(sourceRecordMethod, beCallerMethod)
-    }
 
-    private fun checkParamType(
-        sourceRecordMethod: SourceRecordMethod,
-        beCallerMethod: BeCallerMethod
-    ) {
-        var beCallerMethodStartCount = 0
-        val injectMethodRecordType: Array<Type> =
-            Type.getArgumentTypes(sourceRecordMethod.methodDesc)
-        val beCallMethodParamTypes: Array<Type> =
-            Type.getArgumentTypes(beCallerMethod.methodDescriptor)
-        //首先check第一个参数
-        if (sourceRecordMethod.opcode == Opcodes.INVOKEVIRTUAL
-            || sourceRecordMethod.opcode == Opcodes.INVOKEINTERFACE
-            || sourceRecordMethod.opcode == Opcodes.INVOKESPECIAL
-        ) {
-            val ownerClassName: String = sourceRecordMethod.className ?: ""
-            val type: Type = beCallMethodParamTypes[0]
-            val firstParamClassName = type.className
-            if (!ClassUtil.isSuper(ownerClassName, firstParamClassName)) {
-                CloseUtil.exit("$firstParamClassName is a subclass of $ownerClassName or itself! ")
-            }
-            beCallerMethodStartCount++
-        }
-        // 接下来按照参数逐个check
-        try {
-            injectMethodRecordType.forEach {
-                val injectSourceClassName = it.className
-                val beCallerMethodClassName =
-                    beCallMethodParamTypes[beCallerMethodStartCount].className
-                if (injectSourceClassName == beCallerMethodClassName) {
-                    CloseUtil.exit("param does no the same, injectSourceClassName: $injectSourceClassName, beCallMethodClassName: $beCallerMethodClassName")
-                }
-                beCallerMethodStartCount++
-            }
-        } catch (e: Exception) {
-            CloseUtil.exit("exception when checkParamType!, e: ${e.stackTrace}")
-        }
-
-        if (sourceRecordMethod.needSourceInfo) {
-            val needSourceInfoClassName = beCallMethodParamTypes[beCallerMethodStartCount].className
-            if (String::class.java.name != needSourceInfoClassName) {
-                CloseUtil.exit("source type is error, need string, but now is $needSourceInfoClassName ")
-            }
-        }
-    }
-
-    private fun checkParamCount(
-        sourceRecordMethod: SourceRecordMethod,
-        beCallerMethod: BeCallerMethod
-    ) {
-        val injectMethodParamCount: Int = Type.getArgumentTypes(sourceRecordMethod.methodDesc).size
-        val beCallMethodParamCount: Int =
-            Type.getArgumentTypes(beCallerMethod.methodDescriptor).size
-        val needSourceInfo: Boolean = sourceRecordMethod.needSourceInfo
-        val targetRealParamCount = beCallMethodParamCount - if (needSourceInfo) 1 else 0
-        when (sourceRecordMethod.opcode) {
-            Opcodes.INVOKESTATIC -> {
-                if (injectMethodParamCount != targetRealParamCount) {
-                    CloseUtil.exit("illegal param count, target: $targetRealParamCount, injectCount: $injectMethodParamCount")
-                }
-            }
-            Opcodes.INVOKEVIRTUAL -> {
-                if (injectMethodParamCount + 1 != targetRealParamCount) {
-                    CloseUtil.exit("illegal param count, target: $targetRealParamCount, injectCount: $injectMethodParamCount")
-                }
-            }
-        }
-    }
 }

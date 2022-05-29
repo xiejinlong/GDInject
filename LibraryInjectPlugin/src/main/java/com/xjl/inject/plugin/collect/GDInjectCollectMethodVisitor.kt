@@ -18,6 +18,7 @@ class GDInjectCollectMethodVisitor(
     var supered: Boolean = false
     var forceVerify: Boolean = true
     var needSourceInfo: Boolean = false
+    var after: Boolean = false
 
     var targets: ArrayList<String> = arrayListOf()
     override fun visitAnnotation(descriptor: String?, visible: Boolean): AnnotationVisitor {
@@ -38,6 +39,7 @@ class GDInjectCollectMethodVisitor(
                 AnnotationParam.PARAM_EXTEND -> extend = (value as? Boolean) ?: false
                 AnnotationParam.PARAM_SUPERED -> supered = (value as? Boolean) ?: false
                 AnnotationParam.PARAM_VERIFY -> forceVerify = (value as? Boolean) ?: false
+                AnnotationParam.PARAM_AFTER -> after = (value as? Boolean) ?: false
                 AnnotationParam.PARAM_NEED_SOURCE_INFO -> needSourceInfo =
                     (value as? Boolean) ?: false
             }
@@ -55,7 +57,6 @@ class GDInjectCollectMethodVisitor(
          */
         override fun visitEnd() {
             super.visitEnd()
-            Log.e("xjl", "visit end... target size: ${targets.size}")
             targets.forEach { target ->
                 Log.e("xjl", "collect target is: $target")
                 val className = target.substring(0, target.lastIndexOf("."))
@@ -70,10 +71,15 @@ class GDInjectCollectMethodVisitor(
                     this.className = RegexUtil.replaceClassName(className)
                     this.methodName = RegexUtil.replaceMethodName(methodName)
                     this.methodDesc = RegexUtil.replaceMethodDesc(methodDesc)
-                    Log.e("XJL", "className: ${this.className}, methodName: ${methodName}, methodDesc: ${methodDesc}")
+
+                    Log.e(
+                        "XJL",
+                        "className: ${this.className}, methodName: ${methodName}, methodDesc: ${methodDesc}"
+                    )
                     this.extend = this@GDInjectCollectMethodVisitor.extend
                     this.supered = this@GDInjectCollectMethodVisitor.supered
                     this.needSourceInfo = this@GDInjectCollectMethodVisitor.needSourceInfo
+                    this.after = this@GDInjectCollectMethodVisitor.after
                 }] = beCallerMethod
             }
         }

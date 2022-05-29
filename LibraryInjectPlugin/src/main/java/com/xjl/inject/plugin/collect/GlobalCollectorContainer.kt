@@ -4,7 +4,7 @@ import java.lang.IllegalArgumentException
 import java.util.concurrent.ConcurrentHashMap
 
 object GlobalCollectorContainer {
-    private val collectMap = ConcurrentHashMap<String, InjectAnnotationRecord>()
+    val collectMap = ConcurrentHashMap<String, InjectAnnotationRecord>()
 
     fun restData() {
         collectMap.clear()
