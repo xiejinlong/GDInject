@@ -1,11 +1,9 @@
 package com.xjl.gdinject
 
-import com.xjl.gdinject.annotation.Around
-import com.xjl.gdinject.annotation.Inject
-import com.xjl.gdinject.annotation.Replace
-import com.xjl.gdinject.annotation.TryCatch
+import android.util.Log
+import com.xjl.gdinject.annotation.*
 
-@Inject
+@GDInject
 class TestInjectDemo {
     companion object {
 
@@ -15,11 +13,23 @@ class TestInjectDemo {
             thread.test()
         }
 
+//        @Replace(targets = ["com.xjl.gdinject.MainRealDemoThread.<init>()V"])
+//        @JvmStatic
+//        fun hookRealDemoInit(): MainRealDemoThread {
+//            return MainRealDemoThread()
+//        }
+
         @JvmStatic
         @Around(targets = ["com.xjl.gdinject.MainActivity.innerTestAround()Z"])
         fun aroundTestThread11111(activity: MainActivity): Boolean {
             System.out.println("nothing")
             return false
+        }
+
+        @JvmStatic
+        @Intercept(targets =  ["com.xjl.gdinject.MainActivity.testIntercept()V"])
+        fun tryInterceptMain(activity: MainActivity): Boolean {
+            return true
         }
 
         @JvmStatic
@@ -41,19 +51,19 @@ class TestInjectDemo {
             System.out.println("nothing, activity: , $type, $result")
         }
 
-        @Replace(targets = ["com.xjl.gdinject.MainRealDemoThread.test1()V"])
+        @Replace(targets = ["com.xjl.gdinject.MainRealDemoThread.test1()V"], blackList = ["com.xjl.gdinject.*"])
         @JvmStatic
         fun hookTestThread1(thread: MainRealDemoThread) {
             thread.test()
         }
 
-        @TryCatch(targets = ["com.xjl.gdinject.MainRealDemoThread.test1()V"])
+        @TryCatch(targets = ["com.xjl.gdinject.MainRealDemoThread.test1()V"], callerList = ["com.xjl.gdinject.*"])
         @JvmStatic
         fun catchTestThread1(throwable: Throwable) {
             println(throwable.message)
         }
 
-        @TryCatch(targets = ["com.xjl.gdinject.MainActivity.onCreate(Landroid/os/Bundle;)V"])
+        @TryCatch(targets = ["com.xjl.gdinject.MainActivity.onCreate(Landroid/os/Bundle;)V"], callerList = ["com.xjl.gdinject.*"])
         @JvmStatic
         fun catchMainOnCreate(throwable: Throwable) {
             println(throwable.message)

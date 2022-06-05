@@ -1,23 +1,71 @@
 package com.xjl.inject.plugin.proceed
 
-import com.kuaikan.library.libknifeasm.AsmConstant
+import com.android.tools.build.jetifier.core.utils.Log
 import com.kuaikan.library.libknifeutil.util.ClassUtil
-import com.kuaikan.library.libknifeutil.util.CloseUtil
-import com.kuaikan.library.libknifeutil.util.Log
-import com.kuaikan.library.libknifeutil.util.StringUtil
-import com.xjl.gdinject.annotation.signature.AnnotationSignatureEnum
+import com.xjl.gdinject.annotation.Replace
 import com.xjl.inject.plugin.collect.BeCallerMethod
-import com.xjl.inject.plugin.collect.GlobalCollectorContainer
-import com.xjl.inject.plugin.collect.SourceRecordMethod
+import com.xjl.inject.plugin.collect.BeHandlerMethod
+import com.xjl.inject.plugin.collect.replace.ReplaceBeHandlerMethod
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
-import org.objectweb.asm.Type
 
 class GDInjectReplaceMethodVisitor(
-    private val sourceMethodInfo: SourceMethodInfo,
-    originMethodVisitor: MethodVisitor
+    currentMethodInfo: CurrentMethodInfo,
+    private val originMethodVisitor: MethodVisitor
 ) :
-    MethodVisitor(AsmConstant.ASM_VERSION, originMethodVisitor) {
+    BaseMethodVisitor(currentMethodInfo, originMethodVisitor) {
+
+    /**
+     * for replace <init>
+     * should ignore NEW 、 DUP
+     */
+    private val pendingAction: MutableList<Runnable> = mutableListOf()
+
+//    override fun visitTypeInsn(opcode: Int, type: String?) {
+//        if (opcode != Opcodes.NEW) {
+//            super.visitTypeInsn(opcode, type)
+//            return
+//        }
+//        if (type == null) {
+//            super.visitTypeInsn(opcode, type)
+//            return
+//        }
+//        val beHandlerMethod: BeHandlerMethod? = getBeHandlerConstruct(type)
+//        if (beHandlerMethod == null) {
+//            super.visitTypeInsn(opcode, type)
+//            return
+//        }
+//        Log.e("XJL", "collect new ....., type is: $type")
+//        pendingAction.add(Runnable {
+//            super.visitTypeInsn(opcode, type)
+//        })
+//    }
+//
+//    override fun visitInsn(opcode: Int) {
+//        if (opcode != Opcodes.DUP) {
+//            super.visitInsn(opcode)
+//            return
+//        }
+//        if (pendingAction.isEmpty()) {
+//            return
+//        }
+//        pendingAction.add(Runnable {
+//            super.visitInsn(opcode)
+//        })
+//    }
+
+    @Synchronized
+    fun executePendingAction(type: String) {
+//        if (pendingAction.isEmpty()) {
+//            return
+//        }
+//        Log.e("XJL", "execute.. new ..... $type")
+//        pendingAction.forEach {
+//
+//            it.run()
+//        }
+//        pendingAction.clear()
+    }
 
     override fun visitMethodInsn(
         opcode: Int,
@@ -26,48 +74,68 @@ class GDInjectReplaceMethodVisitor(
         descriptor: String?,
         isInterface: Boolean
     ) {
-//        if (owner?.contains("MainActivity") == true || owner?.contains("TestThread") == true) {
-//            System.out.println("1")
-//        }
-        val queryCurrentReplaceMethodList =
-            GlobalCollectorContainer.getOrCreateByAnnotationSignature(AnnotationSignatureEnum.AnnotationReplace.descriptor).injectMap.keys
-        if (name.contains("test")) {
-            Log.e("xjl", "it.className: ${StringUtil.replaceSlash2Dot(owner)}, methodName: ${name}, methodDesc: ${descriptor}")
+        val refactorCurrentMethodInfo = CurrentMethodInfo().apply {
+            this.methodAccess = opcode
+            this.className = owner
+            this.methodName = name
+            this.methodDesc = descriptor
         }
-        val findSourceRecordMethod: SourceRecordMethod? =
-            queryCurrentReplaceMethodList.filter { it.className == StringUtil.replaceSlash2Dot(owner) }
-                .filter { it.methodName == name }.firstOrNull { it.methodDesc == descriptor }
+        val beCallMethod = getBeCallerMethod(refactorCurrentMethodInfo)
+        if (beCallMethod == null) {
+            executePendingAction(owner)
+            return super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+        }
 
-        if (findSourceRecordMethod == null) {
-            super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+        val beHandlerMethod = getBeHandlerMethod<ReplaceBeHandlerMethod>(refactorCurrentMethodInfo)
+        if (beHandlerMethod == null) {
+            executePendingAction(owner)
+            return super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+        }
+        if (name != "<init>") {
+            executePendingAction(owner)
+        }
+        ParamCheckUtil.checkParamValid(beHandlerMethod, beCallMethod)
+        if (isSameMethodReplace(refactorCurrentMethodInfo, beCallMethod)) {
             return
         }
-        val beCallerMethod =
-            GlobalCollectorContainer.getOrCreateByAnnotationSignature(AnnotationSignatureEnum.AnnotationReplace.descriptor)
-                .injectMap[findSourceRecordMethod]
-        if (beCallerMethod == null) {
-            super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
-            return
+        startReplaceMethod(beHandlerMethod, beCallMethod)
+        if (name == "<init>" && pendingAction.isNotEmpty()) {
+//            visitVarInsn()
         }
-        Log.e("xjl", "try replace....${beCallerMethod.className}:${beCallerMethod.methodName}:${beCallerMethod.methodDescriptor}")
-        findSourceRecordMethod.opcode = opcode
-        ParamCheckUtil.checkParamValid(findSourceRecordMethod, beCallerMethod)
-        startReplaceMethod(findSourceRecordMethod, beCallerMethod)
+    }
+
+    override fun supportAnnotationType(): Class<*> {
+        return Replace::class.java
+    }
+
+    /**
+     * 解决同一个方法下， 在Replace替换下造成递归导致的 StackOverflowException
+     * @return
+     */
+    private fun isSameMethodReplace(
+        currentMethodInfo: CurrentMethodInfo,
+        beCallerMethod: BeCallerMethod
+    ): Boolean {
+        return if (currentMethodInfo.methodName != beCallerMethod.methodName) {
+            false
+        } else ClassUtil.isSuper(currentMethodInfo.className, beCallerMethod.className) &&
+                currentMethodInfo.className == beCallerMethod.className &&
+                currentMethodInfo.methodDesc == beCallerMethod.methodDescriptor
     }
 
     private fun startReplaceMethod(
-        sourceRecordMethod: SourceRecordMethod,
+        beHandlerMethod: ReplaceBeHandlerMethod,
         beCallerMethod: BeCallerMethod
     ) {
-        if (sourceRecordMethod.needSourceInfo) {
+        if (beHandlerMethod.needSourceInfo) {
             val sourceInfo: String =
-                sourceMethodInfo.className + " : " + sourceMethodInfo.methodName + " : " + sourceMethodInfo.methodDesc
+                currentMethodInfo.className + " : " + currentMethodInfo.methodName + " : " + currentMethodInfo.methodDesc
             visitLdcInsn(sourceInfo)
         }
-        super.visitMethodInsn(
+        originMethodVisitor.visitMethodInsn(
             Opcodes.INVOKESTATIC,
-            beCallerMethod.className,
-            beCallerMethod.methodName,
+            beCallerMethod.className!!,
+            beCallerMethod.methodName!!,
             beCallerMethod.methodDescriptor,
             false
         )

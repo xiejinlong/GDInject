@@ -1,11 +1,11 @@
 package com.xjl.inject.plugin.collect
 
 import com.kuaikan.library.libknifeasm.AsmConstant
-import com.kuaikan.library.libknifeutil.util.Log
-import com.xjl.gdinject.annotation.signature.AnnotationSignatureEnum
+import com.xjl.gdinject.annotation.GDInject
 import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.MethodVisitor
+import org.objectweb.asm.Type
 
 class GDInjectCollectClassVisitor(classVisitor: ClassVisitor): ClassVisitor(AsmConstant.ASM_VERSION, classVisitor) {
 
@@ -25,7 +25,7 @@ class GDInjectCollectClassVisitor(classVisitor: ClassVisitor): ClassVisitor(AsmC
         return super.visit(version, access, name, signature, superName, interfaces)
     }
     override fun visitAnnotation(descriptor: String?, visible: Boolean): AnnotationVisitor {
-        if (descriptor == AnnotationSignatureEnum.AnnotationInject.descriptor) {
+        if (descriptor == Type.getDescriptor(GDInject::class.java)) {
             injectClass = true
         }
        return super.visitAnnotation(descriptor, visible)
@@ -40,7 +40,6 @@ class GDInjectCollectClassVisitor(classVisitor: ClassVisitor): ClassVisitor(AsmC
         if (!injectClass) {
             return super.visitMethod(access, name, descriptor, signature, exceptions)
         }
-        Log.e("xjl", "visit method name: $name")
         val beCallerMethod = BeCallerMethod().apply {
             this.className = collectorClassName
             this.access = access

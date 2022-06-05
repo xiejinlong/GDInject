@@ -11,6 +11,7 @@ java {
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib:1.3.72"
     implementation "com.kuaikan.library.client:class-knife-main:0.0.5_dev.12"
+    implementation "androidx.annotation:annotation:1.1.0"
     implementation gradleApi()
     if (rootProject.enableMaven) {
 

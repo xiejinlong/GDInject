@@ -28,5 +28,15 @@ class AnnotationParam {
          */
         const val PARAM_SUPERED = "supered"
 
+        /**
+         *  黑名单，在黑名单中的不生效
+         */
+        const val PARAM_BLACK_LIST = "blackList"
+
+        /**
+         *  白名单，仅针对几个生效
+         */
+        const val PARAM_CALLER_LIST = "callerList"
+
     }
 }

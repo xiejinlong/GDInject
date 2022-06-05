@@ -1,22 +1,20 @@
 package com.xjl.inject.plugin.proceed
 
-import com.kuaikan.library.libknifeasm.AsmConstant
 import com.kuaikan.library.libknifeutil.util.CloseUtil
 import com.kuaikan.library.libknifeutil.util.Log
-import com.kuaikan.library.libknifeutil.util.StringUtil
-import com.xjl.gdinject.annotation.signature.AnnotationSignatureEnum
+import com.xjl.gdinject.annotation.TryCatch
 import com.xjl.inject.plugin.collect.BeCallerMethod
-import com.xjl.inject.plugin.collect.GlobalCollectorContainer
-import com.xjl.inject.plugin.collect.SourceRecordMethod
+import com.xjl.inject.plugin.collect.BeHandlerMethod
+import com.xjl.inject.plugin.collect.trycatch.TryCatchBeHandlerMethod
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 
 class GDInjectTryCatchMethodVisitor(
-    var sourceMethodInfo: SourceMethodInfo,
-    var sourceMethodVisitor: MethodVisitor
-) : MethodVisitor(AsmConstant.ASM_VERSION, sourceMethodVisitor) {
+    currentMethodInfo: CurrentMethodInfo,
+    sourceMethodVisitor: MethodVisitor
+) : BaseMethodVisitor(currentMethodInfo, sourceMethodVisitor) {
 
 
     companion object {
@@ -40,24 +38,12 @@ class GDInjectTryCatchMethodVisitor(
      */
     private val returnLabel = Label()
 
-    private val sourceRecordMethod: SourceRecordMethod? by lazy {
-        if (sourceMethodInfo.className?.contains("Test") == true) {
-            Log.e("xjl", "start try catch method")
-        }
-        val queryTryCatchMethodList =
-            GlobalCollectorContainer.getOrCreateByAnnotationSignature(AnnotationSignatureEnum.AnnotationTryCatch.descriptor).injectMap.keys
-
-        queryTryCatchMethodList.filter {
-            it.className == StringUtil.replaceSlash2Dot(
-                sourceMethodInfo.className
-            )
-        }
-            .filter { it.methodName == sourceMethodInfo.methodName }
-            .firstOrNull { it.methodDesc == sourceMethodInfo.methodDesc }
+    val beCallerMethod: BeCallerMethod? by lazy {
+        getBeCallerMethod(currentMethodInfo)
     }
 
-    private val beCallMethod: BeCallerMethod by lazy {
-        GlobalCollectorContainer.getOrCreateByAnnotationSignature(AnnotationSignatureEnum.AnnotationTryCatch.descriptor).injectMap[sourceRecordMethod]!!
+    val beHandlerMethod: BeHandlerMethod? by lazy {
+        getBeHandlerMethod<TryCatchBeHandlerMethod>(currentMethodInfo)
     }
 
     /**
@@ -65,9 +51,7 @@ class GDInjectTryCatchMethodVisitor(
      */
     override fun visitCode() {
         super.visitCode()
-        if (sourceRecordMethod == null) {
-            return
-        }
+        val beCallMethod =  beCallerMethod?: return
         Log.e(
             "xjl",
             "try try catch....${beCallMethod.className}:${beCallMethod.methodName}:${beCallMethod.methodDescriptor}"
@@ -80,19 +64,16 @@ class GDInjectTryCatchMethodVisitor(
      * 方法结束时调用，需要重新计算局部便量表和操作数栈的大小
      */
     override fun visitMaxs(maxStack: Int, maxLocals: Int) {
-        if (sourceRecordMethod == null) {
-            super.visitMaxs(maxStack, maxLocals)
-            return
-        }
+        val beCallMethod = beCallerMethod ?: return super.visitMaxs(maxStack, maxLocals)
         visitLabel(endLabel)
         visitJumpInsn(Opcodes.GOTO, returnLabel)
         visitLabel(handleLabel)
 
         visitVarInsn(Opcodes.ASTORE, 1)
         visitVarInsn(Opcodes.ALOAD, 1)
-        innerCallDestMethod()
+        innerCallDestMethod(beCallMethod)
         visitLabel(returnLabel)
-        visitReturnOpcodes()
+        visitReturnOpcodes(beCallMethod)
 
         Log.e(
             "xjl",
@@ -101,8 +82,12 @@ class GDInjectTryCatchMethodVisitor(
         super.visitMaxs(maxStack + 2, maxLocals + 2)
     }
 
-    private fun visitReturnOpcodes() {
-        val methodDesc: String = beCallMethod.methodDescriptor ?: ""
+    override fun supportAnnotationType(): Class<*> {
+        return TryCatch::class.java
+    }
+
+    private fun visitReturnOpcodes(beCallerMethod: BeCallerMethod) {
+        val methodDesc: String = beCallerMethod.methodDescriptor ?: ""
         if (methodDesc.contains(")V")) {
             visitInsn(Opcodes.RETURN)
         } else if (methodDesc.contains(")I") || methodDesc.contains(")Z") || methodDesc.contains(")B") || methodDesc.contains(")C")) {
@@ -124,8 +109,8 @@ class GDInjectTryCatchMethodVisitor(
         }
     }
 
-    private fun innerCallDestMethod() {
-        val targetParamTypes: Array<Type> = Type.getArgumentTypes(beCallMethod?.methodDescriptor)
+    private fun innerCallDestMethod(beCallerMethod: BeCallerMethod) {
+        val targetParamTypes: Array<Type> = Type.getArgumentTypes(beCallerMethod.methodDescriptor)
         if (targetParamTypes.size != 1) {
             CloseUtil.exit("tryCatch just enable 1 param")
         }
@@ -134,9 +119,9 @@ class GDInjectTryCatchMethodVisitor(
         }
         super.visitMethodInsn(
             Opcodes.INVOKESTATIC,
-            beCallMethod.className,
-            beCallMethod.methodName,
-            beCallMethod.methodDescriptor,
+            beCallerMethod.className,
+            beCallerMethod.methodName,
+            beCallerMethod.methodDescriptor,
             false
         )
     }

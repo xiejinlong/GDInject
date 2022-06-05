@@ -4,14 +4,14 @@ import java.lang.IllegalArgumentException
 import java.util.concurrent.ConcurrentHashMap
 
 object GlobalCollectorContainer {
-    val collectMap = ConcurrentHashMap<String, InjectAnnotationRecord>()
+    val collectMap = ConcurrentHashMap<Class<*>, InjectAnnotationRecord>()
 
     fun restData() {
         collectMap.clear()
     }
 
     @Synchronized
-    fun getOrCreateByAnnotationSignature(annotationSignature: String?): InjectAnnotationRecord {
+    fun getOrCreateByAnnotationSignature(annotationSignature: Class<*>?): InjectAnnotationRecord {
         annotationSignature ?: throw IllegalArgumentException("can find annotationSignature: $annotationSignature")
         var injectAnnotationRecord = collectMap[annotationSignature]
         if (injectAnnotationRecord == null) {

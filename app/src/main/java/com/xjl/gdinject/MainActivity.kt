@@ -10,8 +10,14 @@ class MainActivity : AppCompatActivity() {
         val thread = MainRealDemoThread()
         thread.test()
         thread.test1()
+        testIntercept()
     }
 
+
+    fun testIntercept() {
+
+        innerTestTryAroundParam(2, false)
+    }
 
     fun innerTestTryCatch(): Boolean {
         if (1 / 0 == 1) {
@@ -25,6 +31,15 @@ class MainActivity : AppCompatActivity() {
             return false
         }
         return true
+    }
+
+    fun testResult(): Int {
+        if (innerTestTryAroundParam(1, false)) {
+            innerTestAround()
+            innerTestTryCatch1()
+            return 1
+        }
+        return 2
     }
 
     fun innerTestTryAroundParam(type: Int, result: Boolean): Boolean {

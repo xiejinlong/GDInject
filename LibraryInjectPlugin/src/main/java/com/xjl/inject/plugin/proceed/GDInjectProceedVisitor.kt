@@ -1,11 +1,8 @@
 package com.xjl.inject.plugin.proceed
 
 import com.kuaikan.library.libknifeasm.AsmConstant
-import com.xjl.gdinject.annotation.Inject
-import org.objectweb.asm.AnnotationVisitor
-import org.objectweb.asm.ClassVisitor
-import org.objectweb.asm.MethodVisitor
-import org.objectweb.asm.Type
+import com.xjl.gdinject.annotation.GDInject
+import org.objectweb.asm.*
 
 class GDInjectProceedVisitor(classVisitor: ClassVisitor) :
     ClassVisitor(AsmConstant.ASM_VERSION, classVisitor) {
@@ -14,7 +11,7 @@ class GDInjectProceedVisitor(classVisitor: ClassVisitor) :
     private var isInjectClass: Boolean = false
 
     override fun visitAnnotation(descriptor: String?, visible: Boolean): AnnotationVisitor {
-        if (descriptor == Type.getDescriptor(Inject::class.java)) {
+        if (descriptor == Type.getDescriptor(GDInject::class.java)) {
             isInjectClass = true
         }
         return super.visitAnnotation(descriptor, visible)
@@ -46,15 +43,13 @@ class GDInjectProceedVisitor(classVisitor: ClassVisitor) :
         if (isInjectClass) {
             return innerMethodVisitor
         }
-        val sourceMethodInfo = SourceMethodInfo().apply {
+        val sourceMethodInfo = CurrentMethodInfo().apply {
             this.className = currentClassName
             this.methodName = name
             this.methodDesc = descriptor
-            this.access = access
+            this.methodAccess = access
         }
-        val tryCatchMethodVisitor = GDInjectTryCatchMethodVisitor(sourceMethodInfo, innerMethodVisitor)
-        val gdInjectReplaceMethodVisitor =  GDInjectReplaceMethodVisitor(sourceMethodInfo, tryCatchMethodVisitor)
-        val gdInjectAroundVisitor = GDInjectAroundMethodVisitor(sourceMethodInfo, gdInjectReplaceMethodVisitor)
-        return gdInjectAroundVisitor
+
+        return GDInjectMethodChain.proceedChain(sourceMethodInfo, innerMethodVisitor)
     }
 }
